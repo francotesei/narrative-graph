@@ -6,57 +6,45 @@ The risk engine evaluates each detected narrative and assigns a risk score based
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              RISK ENGINE                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    INPUT: Narrative + Posts + Groups                 │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    COMPONENT CALCULATORS                             │   │
-│  │                                                                      │   │
-│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │   │
-│  │  │  Velocity  │ │   Coord    │ │    Bot     │ │  Foreign   │       │   │
-│  │  │   Score    │ │  Density   │ │   Score    │ │  Domains   │       │   │
-│  │  │   (0.25)   │ │   (0.30)   │ │   (0.20)   │ │   (0.15)   │       │   │
-│  │  └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘       │   │
-│  │        │              │              │              │               │   │
-│  │  ┌─────┴──────┐                                                    │   │
-│  │  │  Toxicity  │                                                    │   │
-│  │  │   Score    │                                                    │   │
-│  │  │   (0.10)   │                                                    │   │
-│  │  └─────┬──────┘                                                    │   │
-│  │        │                                                            │   │
-│  └────────┼────────────────────────────────────────────────────────────┘   │
-│           │                                                                 │
-│           ▼                                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                      WEIGHTED AGGREGATION                            │   │
-│  │                                                                      │   │
-│  │  risk_score = Σ (weight_i × component_i)                            │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                      CLASSIFICATION                                  │   │
-│  │                                                                      │   │
-│  │  score < 0.3  → LOW                                                 │   │
-│  │  0.3 ≤ score < 0.6 → MEDIUM                                         │   │
-│  │  score ≥ 0.6 → HIGH                                                 │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │              OUTPUT: NarrativeRisk (score, level, reasons)           │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Input
+        Narrative[Narrative + Posts + Groups]
+    end
+    
+    Narrative --> Components
+    
+    subgraph Components["COMPONENT CALCULATORS"]
+        Velocity[Velocity Score<br/>0.25]
+        Coord[Coordination Density<br/>0.30]
+        Bot[Bot Score<br/>0.20]
+        Foreign[Foreign Domains<br/>0.15]
+        Toxicity[Toxicity Score<br/>0.10]
+    end
+    
+    Velocity --> Aggregation
+    Coord --> Aggregation
+    Bot --> Aggregation
+    Foreign --> Aggregation
+    Toxicity --> Aggregation
+    
+    subgraph Aggregation["WEIGHTED AGGREGATION"]
+        Formula["risk_score = Σ(weight × component)"]
+    end
+    
+    Aggregation --> Classification
+    
+    subgraph Classification["CLASSIFICATION"]
+        LOW["score < 0.3 → LOW"]
+        MEDIUM["0.3 ≤ score < 0.6 → MEDIUM"]
+        HIGH["score ≥ 0.6 → HIGH"]
+    end
+    
+    Classification --> Output
+    
+    subgraph Output
+        Result[NarrativeRisk<br/>score, level, reasons]
+    end
 ```
 
 ## Risk Components
@@ -276,6 +264,15 @@ risk:
 ```
 
 ## Risk Classification
+
+```mermaid
+flowchart LR
+    Score[Risk Score] --> Check1{score < 0.3?}
+    Check1 -->|Yes| LOW[🟢 LOW]
+    Check1 -->|No| Check2{score < 0.6?}
+    Check2 -->|Yes| MEDIUM[🟡 MEDIUM]
+    Check2 -->|No| HIGH[🔴 HIGH]
+```
 
 ```yaml
 risk:

@@ -6,56 +6,42 @@ The coordination detection module identifies synchronized behavior between accou
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        COORDINATION DETECTION                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                      INPUT: Posts + Embeddings                       │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    Group Posts by Narrative                          │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │              For each narrative, compare author pairs                │   │
-│  │                                                                      │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │   │
-│  │  │    Text      │  │   Shared     │  │   Shared     │              │   │
-│  │  │  Similarity  │  │   Domains    │  │  Hashtags    │              │   │
-│  │  │   (0.5)      │  │   (0.3)      │  │   (0.2)      │              │   │
-│  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │   │
-│  │         │                 │                 │                       │   │
-│  │         └─────────────────┼─────────────────┘                       │   │
-│  │                           ▼                                         │   │
-│  │                   Weighted Score                                    │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    Filter by Threshold (0.85)                        │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                Build Coordination Graph (Pairs)                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │              Find Connected Components (Groups)                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │         OUTPUT: Coordinated Pairs + Groups + Evidence                │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Input
+        Posts[Posts + Embeddings]
+    end
+    
+    Posts --> Group[Group Posts by Narrative]
+    Group --> Compare[Compare Author Pairs]
+    
+    subgraph Signals["Signal Calculation"]
+        Text[Text Similarity<br/>0.5 weight]
+        Domains[Shared Domains<br/>0.3 weight]
+        Hashtags[Shared Hashtags<br/>0.2 weight]
+    end
+    
+    Compare --> Text
+    Compare --> Domains
+    Compare --> Hashtags
+    
+    Text --> Weighted[Weighted Score]
+    Domains --> Weighted
+    Hashtags --> Weighted
+    
+    Weighted --> Filter[Filter by Threshold<br/>≥ 0.85]
+    Filter --> BuildGraph[Build Coordination Graph<br/>Pairs]
+    BuildGraph --> Components[Find Connected Components<br/>Groups]
+    
+    subgraph Output
+        Pairs[Coordinated Pairs]
+        Groups[Coordinated Groups]
+        Evidence[Evidence]
+    end
+    
+    Components --> Pairs
+    Components --> Groups
+    Components --> Evidence
 ```
 
 ## Coordination Signals
@@ -187,6 +173,22 @@ for narrative_id, posts in narrative_posts.items():
 ### Step 3: Build Groups
 
 We use BFS to find connected components:
+
+```mermaid
+flowchart LR
+    subgraph "Coordination Graph"
+        A((A)) --- B((B))
+        B --- C((C))
+        D((D)) --- E((E))
+        F((F))
+    end
+    
+    subgraph "Groups Found"
+        G1[Group 1: A, B, C]
+        G2[Group 2: D, E]
+        G3[Noise: F]
+    end
+```
 
 ```python
 def build_groups(pairs):

@@ -6,29 +6,30 @@ The data pipeline processes information from ingestion to insight generation. Ea
 
 ## Pipeline Stages
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            DATA PIPELINE                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐  │
-│  │ INGEST  │───▶│ ENRICH  │───▶│ CLUSTER │───▶│  BUILD  │───▶│ DETECT  │  │
-│  │         │    │         │    │         │    │  GRAPH  │    │  COORD  │  │
-│  └─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘  │
-│       │              │              │              │              │        │
-│       ▼              ▼              ▼              ▼              ▼        │
-│   bronze.pq     features.pq   clustered.pq    Neo4j DB      coord.pq     │
-│   silver.pq                   narratives.pq                              │
-│                                                                             │
-│  ┌─────────┐    ┌─────────┐                                               │
-│  │  SCORE  │───▶│ EXPLAIN │                                               │
-│  │  RISK   │    │         │                                               │
-│  └─────────┘    └─────────┘                                               │
-│       │              │                                                     │
-│       ▼              ▼                                                     │
-│   risks.pq     explanations.pq                                            │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Stage1["Stage 1-5"]
+        INGEST[INGEST] --> ENRICH[ENRICH]
+        ENRICH --> CLUSTER[CLUSTER]
+        CLUSTER --> BUILD[BUILD GRAPH]
+        BUILD --> DETECT[DETECT COORD]
+    end
+    
+    subgraph Stage2["Stage 6-7"]
+        SCORE[SCORE RISK] --> EXPLAIN[EXPLAIN]
+    end
+    
+    DETECT --> SCORE
+    
+    INGEST -.-> bronze.pq
+    INGEST -.-> silver.pq
+    ENRICH -.-> features.pq
+    CLUSTER -.-> clustered.pq
+    CLUSTER -.-> narratives.pq
+    BUILD -.-> Neo4j[(Neo4j DB)]
+    DETECT -.-> coord.pq
+    SCORE -.-> risks.pq
+    EXPLAIN -.-> explanations.pq
 ```
 
 ## 1. Ingestion (`ingest`)
@@ -37,11 +38,13 @@ The data pipeline processes information from ingestion to insight generation. Ea
 - JSONL or CSV file with posts
 
 ### Process
-```python
-# Ingestion flow
-load_data(file) → parse_raw_post() → normalize_post() → save_parquet()
-                         ↓
-                   dead_letter_queue (errors)
+
+```mermaid
+flowchart LR
+    load[load_data] --> parse[parse_raw_post]
+    parse --> normalize[normalize_post]
+    normalize --> save[save_parquet]
+    parse -.->|errors| dlq[dead_letter_queue]
 ```
 
 ### Output
@@ -90,9 +93,13 @@ Failed records are saved in SQLite with:
 - `silver.parquet`
 
 ### Process
-```python
-# Enrichment flow
-load_posts() → clean_text() → detect_language() → extract_entities() → save()
+
+```mermaid
+flowchart LR
+    load[load_posts] --> clean[clean_text]
+    clean --> detect[detect_language]
+    detect --> extract[extract_entities]
+    extract --> save[save]
 ```
 
 ### Output
@@ -125,9 +132,13 @@ Supported types:
 - `features.parquet`
 
 ### Process
-```python
-# Clustering flow
-load_posts() → generate_embeddings() → cluster() → assign_narratives() → extract_keywords()
+
+```mermaid
+flowchart LR
+    load[load_posts] --> embed[generate_embeddings]
+    embed --> cluster[cluster]
+    cluster --> assign[assign_narratives]
+    assign --> keywords[extract_keywords]
 ```
 
 ### Output
@@ -204,9 +215,12 @@ NarrativeMetadata(
 - `entities.parquet` (optional)
 
 ### Process
-```python
-# Building flow
-load_data() → create_nodes() → create_relationships() → calculate_metrics()
+
+```mermaid
+flowchart LR
+    load[load_data] --> nodes[create_nodes]
+    nodes --> rels[create_relationships]
+    rels --> metrics[calculate_metrics]
 ```
 
 ### Output
@@ -249,9 +263,12 @@ SET p.text = item.text, ...
 - Neo4j graph
 
 ### Process
-```python
-# Detection flow
-group_by_narrative() → compare_pairs() → calculate_scores() → cluster_groups()
+
+```mermaid
+flowchart LR
+    group[group_by_narrative] --> compare[compare_pairs]
+    compare --> scores[calculate_scores]
+    scores --> cluster[cluster_groups]
 ```
 
 ### Output
@@ -329,14 +346,15 @@ risk:
 - `risks.parquet`
 
 ### Process
-```python
-# Explanation flow
-for narrative in narratives:
-    facts = gather_facts(narrative)
-    if llm_available:
-        explanation = llm_explain(facts)
-    else:
-        explanation = template_explain(facts)
+
+```mermaid
+flowchart TD
+    narrative[For each narrative] --> facts[gather_facts]
+    facts --> check{LLM available?}
+    check -->|Yes| llm[llm_explain]
+    check -->|No| template[template_explain]
+    llm --> output[explanation]
+    template --> output
 ```
 
 ### Output

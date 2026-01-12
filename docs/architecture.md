@@ -6,90 +6,56 @@ Narrative Graph Intelligence is a narrative analysis system designed to detect c
 
 ## Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              INPUT LAYER                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│    ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                 │
-│    │   JSONL     │     │    CSV      │     │  Future:    │                 │
-│    │   Files     │     │   Files     │     │  APIs       │                 │
-│    └──────┬──────┘     └──────┬──────┘     └──────┬──────┘                 │
-│           │                   │                   │                         │
-│           └───────────────────┼───────────────────┘                         │
-│                               ▼                                             │
-│                    ┌─────────────────────┐                                  │
-│                    │   Data Loaders      │                                  │
-│                    │   (ingestion/)      │                                  │
-│                    └──────────┬──────────┘                                  │
-│                               │                                             │
-└───────────────────────────────┼─────────────────────────────────────────────┘
-                                │
-┌───────────────────────────────┼─────────────────────────────────────────────┐
-│                               ▼           PROCESSING LAYER                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         PIPELINE STEPS                               │   │
-│  │                                                                      │   │
-│  │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐         │   │
-│  │  │ Normalize│──▶│  Enrich  │──▶│ Cluster  │──▶│  Build   │         │   │
-│  │  │  Posts   │   │ Features │   │Narratives│   │  Graph   │         │   │
-│  │  └──────────┘   └──────────┘   └──────────┘   └──────────┘         │   │
-│  │       │              │              │              │                │   │
-│  │       ▼              ▼              ▼              ▼                │   │
-│  │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐         │   │
-│  │  │  Bronze  │   │ Features │   │Narratives│   │  Neo4j   │         │   │
-│  │  │  Silver  │   │  Parquet │   │  Parquet │   │  Graph   │         │   │
-│  │  └──────────┘   └──────────┘   └──────────┘   └──────────┘         │   │
-│  │                                                     │               │   │
-│  │  ┌──────────┐   ┌──────────┐   ┌──────────┐        │               │   │
-│  │  │  Detect  │◀──│ Calculate│◀──│ Generate │◀───────┘               │   │
-│  │  │  Coord   │   │   Risk   │   │ Explain  │                        │   │
-│  │  └──────────┘   └──────────┘   └──────────┘                        │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                │
-┌───────────────────────────────┼─────────────────────────────────────────────┐
-│                               ▼           STORAGE LAYER                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐             │
-│  │                 │  │                 │  │                 │             │
-│  │     Neo4j       │  │    Parquet      │  │     SQLite      │             │
-│  │   (Graph DB)    │  │   (Datasets)    │  │  (Run Metadata) │             │
-│  │                 │  │                 │  │                 │             │
-│  │  - Nodes        │  │  - bronze/      │  │  - runs         │             │
-│  │  - Relations    │  │  - silver/      │  │  - run_steps    │             │
-│  │  - Indexes      │  │  - features/    │  │  - dead_letters │             │
-│  │                 │  │  - narratives/  │  │                 │             │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘             │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                │
-┌───────────────────────────────┼─────────────────────────────────────────────┐
-│                               ▼           PRESENTATION LAYER                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                                                                      │   │
-│  │  ┌───────────────┐         ┌───────────────┐         ┌───────────┐  │   │
-│  │  │               │         │               │         │           │  │   │
-│  │  │  Streamlit    │         │   FastAPI     │         │   CLI     │  │   │
-│  │  │     UI        │         │     API       │         │  (Typer)  │  │   │
-│  │  │               │         │               │         │           │  │   │
-│  │  │  - Overview   │         │  - /narratives│         │  - ingest │  │   │
-│  │  │  - Detail     │         │  - /coord     │         │  - enrich │  │   │
-│  │  │  - Coord      │         │  - /graph     │         │  - cluster│  │   │
-│  │  │  - Graph      │         │  - /health    │         │  - etc    │  │   │
-│  │  │               │         │               │         │           │  │   │
-│  │  └───────────────┘         └───────────────┘         └───────────┘  │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph INPUT["INPUT LAYER"]
+        JSONL[JSONL Files]
+        CSV[CSV Files]
+        API[Future: APIs]
+        JSONL --> Loaders
+        CSV --> Loaders
+        API --> Loaders
+        Loaders[Data Loaders<br/>ingestion/]
+    end
+
+    subgraph PROCESSING["PROCESSING LAYER"]
+        subgraph Pipeline["PIPELINE STEPS"]
+            Normalize[Normalize Posts] --> Enrich[Enrich Features]
+            Enrich --> Cluster[Cluster Narratives]
+            Cluster --> Build[Build Graph]
+            Build --> Explain[Generate Explain]
+            Explain --> Risk[Calculate Risk]
+            Risk --> Coord[Detect Coord]
+        end
+        
+        subgraph Outputs["OUTPUTS"]
+            Bronze[Bronze/Silver<br/>Parquet]
+            Features[Features<br/>Parquet]
+            Narratives[Narratives<br/>Parquet]
+            Neo4jGraph[Neo4j<br/>Graph]
+        end
+        
+        Normalize --> Bronze
+        Enrich --> Features
+        Cluster --> Narratives
+        Build --> Neo4jGraph
+    end
+
+    subgraph STORAGE["STORAGE LAYER"]
+        Neo4j[(Neo4j<br/>Graph DB)]
+        Parquet[(Parquet<br/>Datasets)]
+        SQLite[(SQLite<br/>Run Metadata)]
+    end
+
+    subgraph PRESENTATION["PRESENTATION LAYER"]
+        Streamlit[Streamlit UI<br/>Overview, Detail<br/>Coord, Graph]
+        FastAPI[FastAPI<br/>/narratives<br/>/coord, /health]
+        CLI[CLI Typer<br/>ingest, enrich<br/>cluster, etc]
+    end
+
+    INPUT --> PROCESSING
+    PROCESSING --> STORAGE
+    STORAGE --> PRESENTATION
 ```
 
 ## Main Components
@@ -215,53 +181,16 @@ explain/
 
 ## Data Flow
 
-```
-Input (JSONL/CSV)
-       │
-       ▼
-┌──────────────┐
-│   RawPost    │  ← Input schema
-└──────┬───────┘
-       │ normalize
-       ▼
-┌──────────────┐
-│NormalizedPost│  ← Normalized schema
-└──────┬───────┘
-       │ enrich
-       ▼
-┌──────────────┐
-│NormalizedPost│  ← With features
-│ + features   │
-└──────┬───────┘
-       │ cluster
-       ▼
-┌──────────────┐
-│NormalizedPost│  ← With narrative_id
-│ + narrative  │
-└──────┬───────┘
-       │ build-graph
-       ▼
-┌──────────────┐
-│   Neo4j      │  ← Complete graph
-│   Graph      │
-└──────┬───────┘
-       │ detect-coordination
-       ▼
-┌──────────────┐
-│ Coordinated  │  ← Pairs and groups
-│   Groups     │
-└──────┬───────┘
-       │ score-risk
-       ▼
-┌──────────────┐
-│ Narrative    │  ← Scores and levels
-│    Risk      │
-└──────┬───────┘
-       │ explain
-       ▼
-┌──────────────┐
-│ Explanation  │  ← Explanatory text
-└──────────────┘
+```mermaid
+flowchart TD
+    Input[Input JSONL/CSV] --> RawPost[RawPost<br/>Input schema]
+    RawPost -->|normalize| NormalizedPost[NormalizedPost<br/>Normalized schema]
+    NormalizedPost -->|enrich| WithFeatures[NormalizedPost<br/>+ features]
+    WithFeatures -->|cluster| WithNarrative[NormalizedPost<br/>+ narrative_id]
+    WithNarrative -->|build-graph| Neo4jGraph[Neo4j Graph<br/>Complete graph]
+    Neo4jGraph -->|detect-coordination| CoordGroups[Coordinated Groups<br/>Pairs and groups]
+    CoordGroups -->|score-risk| NarrativeRisk[Narrative Risk<br/>Scores and levels]
+    NarrativeRisk -->|explain| Explanation[Explanation<br/>Explanatory text]
 ```
 
 ## Design Patterns

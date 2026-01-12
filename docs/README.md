@@ -15,35 +15,36 @@ This section contains the technical documentation for the project.
 
 ## High-Level Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     NARRATIVE GRAPH INTELLIGENCE                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │  Ingest  │───▶│  Enrich  │───▶│ Cluster  │───▶│  Graph   │          │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘          │
-│       │               │               │               │                 │
-│       ▼               ▼               ▼               ▼                 │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │  Bronze  │    │ Features │    │Narratives│    │  Neo4j   │          │
-│  │  Layer   │    │  Layer   │    │  Layer   │    │  Graph   │          │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘          │
-│                                                       │                 │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐        │                 │
-│  │  Coord   │◀───│   Risk   │◀───│ Explain  │◀───────┘                 │
-│  │ Detect   │    │  Score   │    │  Layer   │                          │
-│  └──────────┘    └──────────┘    └──────────┘                          │
-│       │               │               │                                 │
-│       └───────────────┴───────────────┘                                │
-│                       │                                                 │
-│                       ▼                                                 │
-│              ┌─────────────────┐                                        │
-│              │   UI / API      │                                        │
-│              │ Streamlit/Fast  │                                        │
-│              └─────────────────┘                                        │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Pipeline["DATA PIPELINE"]
+        direction LR
+        Ingest[Ingest] --> Enrich[Enrich]
+        Enrich --> Cluster[Cluster]
+        Cluster --> Graph[Graph]
+    end
+    
+    subgraph Storage["STORAGE"]
+        Bronze[Bronze Layer]
+        Features[Features Layer]
+        Narratives[Narratives Layer]
+        Neo4j[(Neo4j Graph)]
+    end
+    
+    subgraph Analysis["ANALYSIS"]
+        direction LR
+        Coord[Coord Detect] --> Risk[Risk Score]
+        Risk --> Explain[Explain Layer]
+    end
+    
+    subgraph Presentation["UI / API"]
+        Streamlit[Streamlit]
+        FastAPI[FastAPI]
+    end
+    
+    Pipeline --> Storage
+    Storage --> Analysis
+    Analysis --> Presentation
 ```
 
 ## Technology Stack

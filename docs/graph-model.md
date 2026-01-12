@@ -6,37 +6,78 @@ The graph captures relationships between authors, posts, narratives, and other e
 
 ## Model Diagram
 
+```mermaid
+graph LR
+    Author((Author)) -->|POSTED| Post((Post))
+    Post -->|BELONGS_TO| Narrative((Narrative))
+    Post -->|LINKS_TO| Domain((Domain))
+    Post -->|TAGGED_WITH| Hashtag((Hashtag))
+    Post -->|MENTIONS| Entity((Entity))
+    Author -.->|COORDINATED_WITH| Author
+    
+    style Author fill:#e74c3c,color:#fff
+    style Post fill:#3498db,color:#fff
+    style Narrative fill:#2ecc71,color:#fff
+    style Domain fill:#f39c12,color:#fff
+    style Hashtag fill:#9b59b6,color:#fff
+    style Entity fill:#1abc9c,color:#fff
 ```
-                                    ┌─────────────┐
-                                    │             │
-                              ┌────▶│   Domain    │
-                              │     │             │
-                              │     └─────────────┘
-                              │
-                              │ LINKS_TO
-                              │
-┌─────────────┐  POSTED   ┌───┴─────────┐  BELONGS_TO   ┌─────────────┐
-│             │──────────▶│             │──────────────▶│             │
-│   Author    │           │    Post     │               │  Narrative  │
-│             │◀─────────▶│             │               │             │
-└─────────────┘           └───┬─────────┘               └─────────────┘
-       │                      │
-       │ COORDINATED_WITH     │ TAGGED_WITH
-       │ (bidirectional)      │
-       ▼                      ▼
-┌─────────────┐           ┌─────────────┐
-│             │           │             │
-│   Author    │           │   Hashtag   │
-│             │           │             │
-└─────────────┘           └─────────────┘
-                              │
-                              │ MENTIONS
-                              ▼
-                          ┌─────────────┐
-                          │             │
-                          │   Entity    │
-                          │             │
-                          └─────────────┘
+
+## Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    AUTHOR ||--o{ POST : POSTED
+    POST }o--|| NARRATIVE : BELONGS_TO
+    POST }o--o{ DOMAIN : LINKS_TO
+    POST }o--o{ HASHTAG : TAGGED_WITH
+    POST }o--o{ ENTITY : MENTIONS
+    AUTHOR }o--o{ AUTHOR : COORDINATED_WITH
+    
+    AUTHOR {
+        string id PK
+        string handle
+        string platform
+        int post_count
+        float coordination_score
+        int coordination_count
+        int degree_centrality
+    }
+    
+    POST {
+        string id PK
+        string text
+        datetime timestamp
+        string platform
+        string lang
+        string author_id FK
+    }
+    
+    NARRATIVE {
+        string id PK
+        int size
+        array keywords
+        array top_domains
+        array top_hashtags
+        float risk_score
+        string risk_level
+    }
+    
+    DOMAIN {
+        string name PK
+        int post_count
+    }
+    
+    HASHTAG {
+        string tag PK
+        int post_count
+    }
+    
+    ENTITY {
+        string name PK
+        string type
+        int mention_count
+    }
 ```
 
 ## Nodes
