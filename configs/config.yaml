@@ -1,0 +1,89 @@
+# Narrative Graph Intelligence - Configuration
+
+# Paths
+paths:
+  data_dir: "data"
+  outputs_dir: "outputs"
+  bronze_dir: "outputs/bronze"
+  silver_dir: "outputs/silver"
+  features_dir: "outputs/features"
+  dead_letter_dir: "outputs/dead_letter"
+
+# Neo4j Configuration
+neo4j:
+  uri: "bolt://localhost:7687"
+  user: "neo4j"
+  password: "${NEO4J_PASSWORD:-narrative123}"
+  database: "neo4j"
+  max_connection_pool_size: 50
+
+# Embedding Configuration
+embeddings:
+  provider: "sentence-transformers"  # Options: sentence-transformers, openai
+  model: "all-MiniLM-L6-v2"
+  # openai_model: "text-embedding-3-small"  # Used if provider is openai
+  batch_size: 32
+
+# Clustering Configuration
+clustering:
+  algorithm: "hdbscan"  # Options: hdbscan, kmeans
+  min_cluster_size: 5
+  min_samples: 3
+  metric: "euclidean"
+  random_state: 42
+  # n_clusters: 10  # Used if algorithm is kmeans
+
+# Entity Extraction
+entity_extraction:
+  provider: "spacy"  # Options: spacy, llm
+  spacy_model: "en_core_web_sm"
+  entity_types:
+    - "PERSON"
+    - "ORG"
+    - "GPE"
+    - "LOC"
+    - "EVENT"
+
+# Coordination Detection
+coordination:
+  time_window_minutes: 60
+  similarity_threshold: 0.85
+  min_group_size: 3
+  shared_domain_weight: 0.3
+  shared_hashtag_weight: 0.2
+  text_similarity_weight: 0.5
+
+# Risk Scoring
+risk:
+  weights:
+    velocity: 0.25
+    coordination_density: 0.30
+    bot_score: 0.20
+    foreign_domain_ratio: 0.15
+    toxicity: 0.10
+  thresholds:
+    low: 0.3
+    medium: 0.6
+    high: 0.8
+  foreign_tlds:
+    - ".ru"
+    - ".cn"
+    - ".ir"
+
+# LLM Configuration
+llm:
+  provider: "openai"  # Options: openai, none (uses fallback)
+  model: "gpt-4o-mini"
+  max_tokens: 500
+  temperature: 0.3
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"  # Options: json, console
+  log_file: "outputs/narrative_graph.log"
+
+# Pipeline
+pipeline:
+  run_id_prefix: "run"
+  save_intermediate: true
